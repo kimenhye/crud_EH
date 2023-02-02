@@ -1,7 +1,7 @@
 plugins {
     id 'java'
     id 'war'
-    id 'org.springframework.boot' version '2.7.8'
+    id 'org.springframework.boot' version '2.7.6'
     id 'io.spring.dependency-management' version '1.0.15.RELEASE'
 }
 
@@ -14,19 +14,28 @@ configurations {
         extendsFrom annotationProcessor
     }
 }
-
 repositories {
     mavenCentral()
 }
-
 dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+    implementation fileTree(dir: "src/main/resources/static/WEB-INF/lib", include: ['*.jar'])
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
     implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.springframework.boot:spring-boot-starter-web-services'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    //jdbc
+    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+    implementation 'com.oracle.ojdbc:ojdbc8:19.3.0.0'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+    implementation 'org.jetbrains:annotations:23.1.0'
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
-    providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat'
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    annotationProcessor "org.springframework.boot:spring-boot-configuration-processor"
+
+    //testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    //implementation group: 'org.javassist', name: 'javassist', version: '3.15.0-GA'
 }
 
 tasks.named('test') {
