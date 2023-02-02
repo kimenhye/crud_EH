@@ -1,0 +1,268 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ev="http://www.w3.org/2001/xml-events"
+      xmlns:w2="http://www.inswave.com/websquare" xmlns:xf="http://www.w3.org/2002/xforms">
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no"/>
+        <w2:type>DEFAULT</w2:type>
+        <w2:buildDate/>
+        <xf:model>
+            <xf:instance>
+                <data xmlns=""/>
+            </xf:instance>
+            <w2:dataCollection baseNode="map"></w2:dataCollection>
+            <w2:workflowCollection></w2:workflowCollection>
+        </xf:model>
+        <script type="text/javascript" lazy="false"><![CDATA[
+            scwin.onpageload = function () {
+
+                if(cm.runMode.startsWith("FINTECH")) {
+                    tb_welcome_msg.setValue("관리서버 방문을 환영합니다.");
+                    tb_label_id.setValue("아이디");
+                    tb_label_password.setValue("비밀번호");
+                    btn_lable_login.setValue("로그인");
+                }
+
+                localStorage.removeItem('AUTH-TOKEN');
+                localStorage.removeItem('AUTH-TOKEN-EXPIRED-DATE');
+                localStorage.removeItem('userInfo');
+
+                // Mobile일때 메뉴 동작
+                if (WebSquare.util.isMobile()) {
+                    $(".side").addClass("close");
+                    $(".btn_toggle_menu").addClass("on");
+
+                    $(".btn_toggle_menu").click(function () {
+                        if ($(".side").hasClass("close")) {
+                            $(".side").addClass("open");
+                            $(".side").removeClass("close");
+                        } else {
+                            $(".side").addClass("close");
+                            $(".side").removeClass("open");
+                        }
+                    });
+
+                } else {
+                    $(".btn_toggle_menu").click(function () {
+                        $(".wrap").toggleClass("show_menu");
+                        $(".btn_toggle_menu").toggleClass("on");
+                    });
+                }
+
+                //
+                $(".btn_toggle_menu").click(function () {
+                    if ($(".side").hasClass("close")) {
+                        $(".side").addClass("open");
+                        $(".side").removeClass("close");
+                    } else {
+                        $(".side").addClass("close");
+                        $(".side").removeClass("oepn");
+                    }
+                });
+
+                $(".side_menu01 a").click(function () {
+                    if ($(this).parent().hasClass("on")) {
+                        $(this).parent().removeClass("on");
+                        $(this).parent("li").children("ul").slideUp();
+                    } else {
+                        if ($(this).parents("ul").hasClass("dep3")) {
+                            $(".side_menu03 a").parent().removeClass("on");
+                            var aa = new Array();
+                            aa = $(this).parents("li.on").siblings("li");
+                            aa.find(".side_menu02 > li.on").removeClass("on").children("ul").slideUp();
+                        }
+                        $(this).parent().addClass("on").siblings().removeClass("on").children("ul").slideUp();
+                        $(this).next("ul").slideDown();
+                    }
+                });
+
+                //input clear버튼
+                $('.login_container .login_info .login_item input').on('input active', function () {
+                    var $this = $(this);
+                    var visible = Boolean($this.val());
+                    $this.siblings('.btn_login_close').toggleClass('hidden', !visible)
+                }).trigger('active');
+
+                $('.btn_login_close').click(function () {
+                    $(this).siblings('input').val('')
+                            .trigger('active').focus();
+                });
+
+                ipt_id.focus();
+            };
+
+
+            scwin.onpageunload = function () {
+
+            };
+
+            scwin.btnUserSelect_onclick = function () {
+                $(".user_box .items").toggleClass("on");
+            };
+
+            scwin.btn_login_onclick = function () {
+                var userId = ipt_id.getValue();
+                var userPw = ipt_pwd.getValue();
+                if (userId == null || userId.length < 2) {
+                    cm.alert("ID를 정확히 입력하십시오.");
+                    ipt_id.focus();
+                    return;
+                }
+                if (userPw == null || userPw.length < 2) {
+                    cm.alert("비밀번호를 정확히 입력하십시오.");
+                    ipt_pw.focus();
+                    return;
+                }
+
+                var sbm = cm.createSubmissionSimple(cm.managerServerUrl + "/api/wem/authentication/login", scwin.loginRequestDone, scwin.loginRequestDoneError);
+                $p.executeSubmission(sbm, {
+                    "loginId": userId,
+                    "pwd": btoa(btoa(userPw))
+                });
+            }
+
+            scwin.loginRequestDone = function (res) {
+
+                console.log("loginRequestDone : ", res);
+
+                var data = res.responseJSON;
+                var resultCode = data.resultCode;
+                // 로그인 실패-ID :  RESULT_DATA_NOT_FOUND = 0
+                // 로그인 성공 : RESULT_SUCESS = 1
+                // 로그인 실패-비밀번호 : RESULT_PASSWORD_MISMATCH = 2;
+                // 로그인 실패-최초패스워드 : RESULT_IS_FIRST_PASSWORD = 3;
+                // 로그인 실패-계정만료 : RESULT_IS_OVER_DUE_DATE = 4;
+                if (resultCode === 1) {
+                    localStorage.setItem('AUTH-TOKEN', res.responseJSON.token);
+                    localStorage.setItem('AUTH-TOKEN-EXPIRED-DATE', res.responseJSON.tokenExpiredDate);
+                    localStorage.setItem('userInfo', JSON.stringify(res.responseJSON.userInfo));
+                    cm.router.indexPage();
+                } else if ( resultCode==0 || resultCode==2 ) {
+                    cm.alert("아이디 또는 비밀번호가 일치하지 않습니다.");
+                } else {
+					//8001
+					//필수 정보 값이 존재하지 않습니다.
+					//(userid 나 password 값이 없는 경우)
+					//
+					//8002
+					//POST 방식의 요청만 가능합니다.
+					//(POST 이외의 방식으로 호출한 경우)
+					//
+					//5401
+					//사용자 정보가 올바르지 않습니다.
+					//(ID 또는 비밀번호가 틀린 경우)
+					//
+					//5403
+					//비밀번호 5회 입력 오류로 인하여 계정이 잠겼습니다.
+					//초기화한 후 다시 시도하시기 바랍니다.
+					//(비밀번호 5회 이상 틀려서 잠긴 경우)
+					//
+					//
+					//5410
+					//인증 서버와의 통신에 장애가 발생했습니다.
+					//(SSO 서버에 장애가 있을때 발생)                
+                	
+                	if (resultCode === 8001) {
+                		cm.alert("필수 정보 값이 존재하지 않습니다.");
+                    } else if (resultCode === 5401) {
+                        cm.alert("사용자 정보가 올바르지 않습니다.");
+                    } else if (resultCode === 5403) {
+                        cm.alert("비밀번호 5회 입력 오류로 인하여 계정이 잠겼습니다.\n - 초기화한 후 다시 시도하시기 바랍니다.");
+                    } else if (resultCode === 5410) {
+                        cm.alert("인증 서버와의 통신에 장애가 발생했습니다.");
+                    } else {
+                        cm.alert("알수없는 오류발생.");
+                    }
+                    ipt_id.focus();
+                }
+            }
+
+            scwin.loginRequestDoneError = function (e) {
+                console.log("loginRequestDoneError : ", e);
+            }
+
+            scwin.ipt_id_onkeydown = function (e) {
+                if (e.keyCode === 13 || e.keyCode === 9) {
+                    e.preventDefault();
+                    ipt_pwd.focus();
+                } else if (e.shiftKey && e.keyCode === 9) {
+                    e.preventDefault();
+                    btn_login.focus();
+                }
+            };
+
+            scwin.ipt_pwd_onkeydown = function (e) {
+                if (e.keyCode === 13) {
+                    scwin.btn_login_onclick();
+                } else if (e.shiftKey && e.keyCode === 9) {
+                    e.preventDefault();
+                    ipt_id.focus();
+                }
+            };
+            ]]></script>
+        <style type="text/css"><![CDATA[]]></style>
+    </head>
+    <body ev:onpageload="scwin.onpageload" ev:onpageunload="scwin.onpageunload" style="overflow:hidden;">
+        <xf:group style="" id="" class="login_main_wrap" adaptive="layout" adaptiveThreshold="1024" tagname="">
+
+            <xf:group style="" id="" class="login_header">
+                <xf:group style="" id="" tagname="h1" tabIndex="" class="logo">
+                    <w2:anchor outerDiv="false" style="" id="" tabIndex="" toolTip="" userData2="" userData3="">
+                        <xf:label><![CDATA[]]></xf:label>
+                    </w2:anchor>
+
+
+                </xf:group>
+            </xf:group>
+            <xf:group style="" id="" class="login_container" adaptive="layout" adaptiveThreshold="1024">
+                <xf:group style="" id="" class="login_contents" adaptive="layout" adaptiveThreshold="1024" tagname="">
+                    <xf:group id="" class="login_welcome">
+                        <xf:group style="" id="" class="login_tit">
+
+                            <w2:textbox tagname="h2" style="" label="Welcome. Are you login?" id="tb_welcome_msg" class=""></w2:textbox>
+
+                        </xf:group>
+                    </xf:group>
+                    <xf:group style="" id="" class="login_info">
+                        <xf:group style="" id="" class="login_item user">
+                            <w2:textbox label="ID" style="" id="tb_label_id" tagname="span" tooltipDisplay=""></w2:textbox>
+                            <xf:input adjustMaxLength="false" id="ipt_id" style="" class="cont_user" customModelFormatter="" type=""
+                                      useMonthYearFormat="" useVerticalAlign="" dataType="" displayFormatter="" disabled="" applyFormat="" autocomplete="" autoFocus=""
+                                      customModelUnformatter="" ev:onkeydown="scwin.ipt_id_onkeydown">
+                            </xf:input>
+                            <xf:trigger type="anchor" style="" id="" disabled="" class="btn_login_close hidden" centerOffImageClass=""
+                                        anchorWithGroupClass="" rightOffImageClass="" leftOnImageClass="">
+                                <xf:label><![CDATA[]]></xf:label>
+                            </xf:trigger>
+                        </xf:group>
+                        <xf:group class="login_item pwd" id="" style="">
+                            <w2:textbox id="tb_label_password" label="PASSWORD" style="" tagname="span" tooltipDisplay=""></w2:textbox>
+                            <xf:secret id="ipt_pwd" style="" class="cont_pwd" ref="" nextTabID="" ev:onkeydown="scwin.ipt_pwd_onkeydown"></xf:secret>
+                            <xf:trigger anchorWithGroupClass="" centerOffImageClass="" class="btn_login_close hidden" disabled="" id=""
+                                        leftOnImageClass="" rightOffImageClass="" style="" type="anchor">
+                                <xf:label></xf:label>
+                            </xf:trigger>
+                        </xf:group>
+                        <w2:anchor outerDiv="false" style="" id="btn_lable_login" class="btn_login" href="" ev:onclick="scwin.btn_login_onclick">
+                            <xf:label><![CDATA[LOGIN]]></xf:label>
+                        </w2:anchor>
+                    </xf:group>
+                    <xf:select selectedindex="-1" id="" appearance="full" style="display:none;" cols="" rows="" ref=""
+                               renderType="checkboxgroup" class="btn_id_chk">
+                        <xf:choices>
+                            <xf:item>
+                                <xf:label><![CDATA[아이디 저장]]></xf:label>
+                                <xf:value><![CDATA[]]></xf:value>
+                            </xf:item>
+                        </xf:choices>
+                    </xf:select>
+
+                </xf:group>
+
+            </xf:group>
+        </xf:group>
+        <xf:group style="" id="" class="bt_imgLeft"></xf:group>
+        <xf:group class="bt_imgRight" id="" style=""></xf:group>
+
+    </body>
+</html>

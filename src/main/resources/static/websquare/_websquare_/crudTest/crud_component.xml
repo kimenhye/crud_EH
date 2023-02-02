@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ev="http://www.w3.org/2001/xml-events"
+      xmlns:w2="http://www.inswave.com/websquare" xmlns:xf="http://www.w3.org/2002/xforms">
+    <head>
+        <w2:type>DEFAULT</w2:type>
+        <w2:buildDate/>
+        <xf:model>
+            <xf:instance>
+                <data xmlns=""/>
+            </xf:instance>
+            <w2:dataCollection>
+                <w2:dataList id="dc_gridViewData" baseNode="list" style="" repeatNode="map" valueAttribute="">
+                    <w2:columnInfo>
+                        <w2:column id="chk" name="dept" dataType="text" ignoreStatus="true" defaultValue="0"></w2:column>
+                        <w2:column id="id" name="id" dataType="text"></w2:column>
+                        <w2:column id="name" name="name" dataType="text"></w2:column>
+                        <w2:column id="ip" name="ip" dataType="text"></w2:column>
+                    </w2:columnInfo>
+                </w2:dataList>
+            </w2:dataCollection>
+            <xf:submission id="sub_save"
+                           ref='data:json,[{"id":"dc_gridViewData","action":"inserted","key":"insertParam"},{"id":"dc_gridViewData","action":"deleted","key":"deleteParam"},{"id":"dc_gridViewData","action":"updated","key":"updateParam"}]'
+                           target="" action="/save.do" method="post" mediatype="application/json" encoding="UTF-8" instance="" replace="" errorHandler=""
+                           customHandler="" mode="asynchronous" processMsg="" ev:submit="" ev:submitdone="" ev:submiterror="scwin.sub_save01_submiterror">
+            </xf:submission>
+        </xf:model>
+        <script type="text/javascript" lazy="false"><![CDATA[
+            scwin.onpageload = function () {
+                cm.setTitleName();
+                scwin.searchCrudList(true);
+            };
+
+            scwin.onpageunload = function () {
+
+            };
+
+            scwin.btnInsert_onclick = function(e) {
+                dc_gridViewData.insertRow(0);
+            };
+
+            scwin.btnDelete_onclick = function(e){
+                var chArr = grd02.getCheckedIndex( "chk" );
+                if(chArr.length < 1){
+                    alert("선택 된 항목이 없습니다.");
+                }else{
+                    dc_gridViewData.removeRows( chArr );
+                }
+            };
+
+            scwin.btnSave_onclick = function(e){
+                scwin.exclusionInsert();
+                var tmpGetOpt = {
+                    id : "dc_gridViewData",
+                    action : "inserted"
+                };
+                var tmpJSON = $p.data.get("JSON",[tmpGetOpt]);
+                alert(JSON.stringify(tmpJSON,null,"\t"));
+            };
+
+            ]]></script>
+    </head>
+
+    <body ev:onpageload="scwin.onpageload" ev:onpageunload="scwin.onpageunload">
+        <xf:group class="sub_contents" id="" style="">
+            <xf:group class="pgtbox" id="" style="">
+                <w2:textbox class="pgt_tit" id="txt_title" label="CRUD 과제"></w2:textbox>
+            </xf:group>
+
+            <xf:group class="dfbox" id="" style="">
+                <xf:group class="fr" id="" style="">
+                    <xf:trigger class="btn_cm active" type="button" style="" id="btnInsert"  ev:onclick="scwin.btnInsert_onclick">
+                        <xf:label><![CDATA[추가]]></xf:label>
+                    </xf:trigger>
+                    <xf:trigger class="btn_cm active" type="button" style="" id="btn_delete"  ev:onclick="scwin.btnDelete_onclick">
+                        <xf:label><![CDATA[삭제]]></xf:label>
+                    </xf:trigger>
+                    <xf:trigger class="btn_cm active" type="button" style="" id="btn_update" ev:onclick="scwin.btnSave_onclick">
+                        <xf:label><![CDATA[저장]]></xf:label>
+                    </xf:trigger>
+                    <w2:textbox class="sum" id="textbox2" label="" style="margin-left: 10px;">
+                    </w2:textbox>
+                </xf:group>
+            </xf:group>
+            <xf:group class="gvwbox" id="group1" style="">
+                <w2:gridView autoFit="allColumn" autoFitMinWidth="800" class="wq_gvw" dataList="dc_gridViewData" defaultCellHeight="35" ev:oncellclick="scwin.gridView1_oncellclick"
+                             focusMode="row" id="grd02" keepDefaultColumnWidth="true" readOnly="false" rowNumHeaderValue="No" rowNumVisible="true" sortEvent="ondblclick" sortable="true"
+                             rowNumWidth="50" scrollByColumn="false" scrollByColumnAdaptive="false" style="height: 250px;" visibleRowNum="5">
+
+                    <w2:caption style="" id="caption1" value="this is a grid caption."></w2:caption>
+                    <w2:header style="" id="header1">
+                        <w2:row style="" id="row1">
+                            <w2:column width="70" inputType="checkbox" style="height:20px" checkboxLabel="선택" id="column13" value="chk"
+                                       displayMode="label">
+                            </w2:column>
+                            <w2:column width="70" inputType="text" style="height:20px" id="column3" value="Id" displayMode="label"></w2:column>
+                            <w2:column width="70" inputType="text" style="height:20px" id="column5" value="이름" displayMode="label"></w2:column>
+                            <w2:column width="70" inputType="text" style="height:20px" id="column4" value="IP" displayMode="label"></w2:column>
+                        </w2:row>
+                    </w2:header>
+                    <w2:gBody style="" id="gBody1" value="this is a grid">
+                        <w2:row style="" id="row2">
+                            <w2:column width="70" inputType="checkbox" style="height:20px" checkboxLabel="선택" id="chk" value=""
+                                       displayMode="label" fixColumnWidth="true">
+                            </w2:column>
+                            <w2:column width="70" inputType="text" style="height:20px" id="id" value="" displayMode="label"></w2:column>
+                            <w2:column width="70" inputType="text" style="height:20px" id="name" value="" displayMode="label"></w2:column>
+                            <w2:column width="70" inputType="text" style="height:20px" id="ip" value="" displayMode="label"></w2:column>
+                        </w2:row>
+                    </w2:gBody>
+                </w2:gridView>
+            </xf:group>
+        </xf:group>
+    </body>
+</html>

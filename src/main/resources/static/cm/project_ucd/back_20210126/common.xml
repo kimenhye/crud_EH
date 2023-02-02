@@ -1,0 +1,880 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml"
+xmlns:ev="http://www.w3.org/2001/xml-events"
+xmlns:w2="http://www.inswave.com/websquare"
+xmlns:xf="http://www.w3.org/2002/xforms">
+	<head>
+		<w2:type>COMPONENT</w2:type>
+		<w2:buildDate/>
+		<w2:publicInfo method="scwin.initCommonMenu,scwin.getHeaderType,scwin.getSideType,scwin.openMenu,scwin.setLayoutType, 
+		                       scwin.getLayoutType, scwin.setLayoutId, scwin.getMenuInfo, 
+		                       scwin.setCommonCode,scwin.getCodeDataListInfo,
+		                       scwin.executeSubmission,scwin.dynamicSubmission,scwin.commonErrorHandler,
+		                       scwin.createDataList,scwin.createDataMap" >
+    	</w2:publicInfo>
+		<xf:model>
+
+			<w2:dataCollection baseNode="map">
+        		 <w2:dataMap baseNode="map" id="dma_commonCode">
+        			<w2:keyInfo>
+
+        				<w2:key id="GRP_CD" name="GRP_CD" dataType="text"></w2:key>
+         				<w2:key id="DATA_PREFIX" name="name2" dataType="text"></w2:key>
+        				<w2:key id="SCOPE_ID" name="name3" dataType="text"></w2:key>
+        			</w2:keyInfo>
+        		</w2:dataMap> 
+        		<w2:dataList baseNode="list" repeatNode="map" id="dlt_codeList" saveRemovedData="true">
+        			<w2:columnInfo>
+        				<w2:column id="CODE_NM" name="CODE_NM" dataType="text"></w2:column>
+        				<w2:column id="COM_CD" name="COM_CD" dataType="text"></w2:column>
+        				<w2:column id="GRP_CD" name="GRP_CD" dataType="text"></w2:column>
+
+        			</w2:columnInfo>
+        		</w2:dataList>
+
+        	</w2:dataCollection>
+			<w2:workflowCollection>
+			</w2:workflowCollection>
+	    	<xf:submission id="sbm_menuData" ref="" target="data:json,dataList1" action="" method="post" mediatype="application/json"
+	    			encoding="UTF-8" instance="" replace="" errorHandler="" customHandler="" mode="asynchronous" processMsg="" ev:submit=""
+	    			ev:submitdone="scwin.sbm_menuData_submitdone" ev:submiterror="" abortTrigger="">
+    		</xf:submission>
+        	<xf:submission id="sbm_selectCodeList" ref='data:json,{"id":"dma_commonCode","key":"dma_commonCode"}' target="" action="" method="get" mediatype="application/json" encoding="UTF-8"
+        		instance="" replace="" errorHandler="" customHandler="" mode="asynchronous" processMsg="" ev:submit=""
+        		ev:submitdone="scwin.sbm_selectCodeList_submitdone" ev:submiterror="" abortTrigger="">
+        	</xf:submission>    		
+
+		</xf:model>
+		<w2:layoutInfo>
+		</w2:layoutInfo>
+		<script type="text/javascript" lazy="false"><![CDATA[
+		
+//메뉴관련 array
+	scwin.menuCallBackArr = [];
+   // 메뉴 관련 변수 셋팅 START
+	scwin.COMMON_MENU_INFO   =  {
+								  DATA_LIST       : "dlt_menu",   //시스템 오픈시 권한에 따른 전체 메뉴를 관리하는 DATA LIST
+								  LEVEL_FIELD     : "MENU_LEVEL",      //메뉴DEPTH
+								  ID_FIELD        : "MENU_CD",         //메뉴코드 ( ID )
+								  NAME_FIELD      : "MENU_NM",         //메뉴한글
+								  SRC_FIELD       : "SRC_PATH",        //메뉴 화면 URL
+								  PARENT_FIELD    : "PARENT_MENU_CD",  //상위 메뉴 코드 (ID)
+								  FILED_ARR       : [ "BIZ_TYPE"] 
+						        };
+	scwin.MENU_COMPONENT_TYPE =  {
+									SIDE   : "2",  // WFRAME일 경우 '1', UDC일 경우 '2' , 메인 LAYOUT과 하나의 페이지로 구성되어 있을 경우 '3'
+									HEADER : "2"   // WFRAME일 경우 '1', UDC일 경우 '2' , 메인 LAYOUT과 하나의 페이지로  구성되어 있을 경우 '3'   
+			                      };
+			                      
+    scwin.LAYOUT_TYPE       = "T";// 메인 LAYOUT 의 MDI가 TAB CONTROL일 경우 'T' , WINDOW CONTAINER 일 경우 'M', SDI 일 경우 'S'
+    scwin.LAYOUT_ID         = "";  // 메인 LAYOUT 의 MDI가 TAB CONTROL ID or  WINDOW CONTAINER ID
+        
+	if ( scwin.LAYOUT_TYPE == "T" ){
+		scwin.LAYOUT_ID =  "tac_layout" ;
+	} else if ( scwin.LAYOUT_TYPE == "M" ){
+		scwin.LAYOUT_ID =  "wdc_main" ;
+	} else if ( scwin.LAYOUT_TYPE == "S" ){
+		scwin.LAYOUT_ID =  "wfm_main";
+	} 
+	
+	scwin.selMenuAction = "/main/init";
+	scwin.codeActionMethod = "post";
+   // 메뉴 관련 변수 셋팅 END
+
+   // 코드 관련 변수 셋팅 START
+	scwin.scopeList = [];
+	scwin.codeListAll = []; 
+
+	scwin.COMMON_CODE_INFO = {
+		DATALIST : "dlt_codeList",             //코드 공통WFRAME컴포넌트에서 사용할 DataList 명
+		LABEL : "CODE_NM",                     //코드 공통WFRAME컴포넌트의  label 필드명
+		VALUE : "COM_CD",                      //코드 공통WFRAME컴포넌트의  value 필드명
+		GROUP_COLUMN : "GRP_CD",               //코드 공통WFRAME컴포넌트의  code 그룹( 분류코드 ) 필드명
+		FILED_ARR : [ "CODE_NM","COM_CD","GRP_CD"  ]  //코드 공통WFRAME컴포넌트의  DataList의 필드 조합 
+	};
+
+	
+
+	scwin.selCodeAction = "/common/selectCodeList";  // 코드조회 서비스  URL - 예 ) /codeService.do , /codeService.jsp 등
+	scwin.codeActionMethod = "post";
+	scwin.DATA_PREFIX = "list_";          // 코드조회 data 의  json 객체 prefix
+	                                               //예) list_00019: [{SORT_ORDER: 1, GRP_CD: "00019", COM_CD: "01", CODE_NM: "PM"},…] 
+   // 코드 관련 변수 셋팅 둥
+
+
+	scwin.onpageload = function() {
+        
+	};
+
+	
+ /**
+  * @method
+  * @name initCommonMenu
+  * @description $c.common.menu 초기화 함수 ( menu dataList 동적생성  , 메뉴조회  )
+  * @param <object> _$p 호출한 페이지의 scope 객체 
+  * @param <object> _callBack 호출한 화면에서 메뉴리스트 조회후 후처리 함수 
+  * @hidden N
+  * @exception 
+  * @sample 
+  */ 
+ 
+ 	scwin.initCommonMenu = function ( _$p , _callBack ){
+		scwin.menuCallBackArr.push(_callBack); // call back함수 - menu data를 서버에서 가져온 다음에 side/header 화면 등에 메뉴데이타를 set하기 위한 콜백함수
+		scwin.createCommonMenuDataList();				
+	};
+	
+	
+	scwin.getMenuInfo = function(){
+		return scwin.COMMON_MENU_INFO;
+	};
+   /**
+    * @method
+    * @name getHeaderType
+    * @description 메인화면 상단 헤더의 컴퍼넌트 타입 조회
+    * @return <string> WFRAME일 경우 '1', UDC일 경우 '2' 
+  	* @param <object> _$p 호출한 페이지의 scope 객체 
+    * @hidden N
+    * @exception 
+    * @sample 
+    */ 
+ 
+   scwin.getHeaderType = function( _$p ){
+   		return scwin.MENU_COMPONENT_TYPE.HEADER;
+   };
+   
+   
+  
+ /**
+  * @method
+  * @name getSideType
+  * @description 메인화면 (좌측) 메뉴의 컴퍼넌트 타입 조회
+  * @return <string> WFRAME일 경우 '1', UDC일 경우 '2' 
+  * @param <object> _$p 호출한 페이지의 scope 객체 
+  * @hidden N
+  * @exception 
+  * @sample 
+  */
+  
+  scwin.getSideType = function( _$p ){
+   		return scwin.MENU_COMPONENT_TYPE.SIDE;
+   };	
+
+   
+ /**
+  * @method
+  * @name getLayoutType
+  * @description main MDI가 TabCONTROL일 경우 'T' , WINDOW CONTAINER 일 경우 'M'
+  * @return <string> TABCONTROL일경우 'T' , WINDOW CONTAINER 일 경우 'M'
+  * @param <object> _$p 호출한 페이지의 scope 객체 
+  * @hidden N
+  * @exception 
+  * @sample 
+  */   	
+   scwin.getLayoutType = function(_$p ){
+		return scwin.LAYOUT_TYPE;
+   };
+   
+ /**
+  * @method
+  * @name setLayoutType
+  * @description main 화면에서 tabControl  , WINDOW CONTAINER을 변경하는 경우 셋팅
+  * @param <object> _$p 호출한 페이지의 scope 객체 
+  * @param <String> type TABCONTROL일경우 'T' , WINDOW CONTAINER 일 경우 'M' 
+  * @hidden N
+  * @exception 
+  * @sample 
+  */ 
+   scwin.setLayoutType = function( _$p, type){
+		scwin.LAYOUT_TYPE = type;
+	   
+	};
+	
+	
+	scwin.setLayoutId = function( _$p, id){
+		scwin.LAYOUT_ID =  id;
+	   
+	}; 
+
+	/**
+	 * @method
+	 * @name createCommonMenuDataList
+	 * @description $c.common 메뉴 dataList 동적생성
+	 * @hidden Y
+	 * @exception 
+	 * @sample 
+	 */ 
+	scwin.createCommonMenuDataList = function(){
+		var columnInfoJson = {};
+		var columnInfoList = [];
+
+		scwin.COMMON_MENU_INFO.FILED_ARR.push(scwin.COMMON_MENU_INFO.LEVEL_FIELD);
+		scwin.COMMON_MENU_INFO.FILED_ARR.push(scwin.COMMON_MENU_INFO.ID_FIELD);
+		scwin.COMMON_MENU_INFO.FILED_ARR.push(scwin.COMMON_MENU_INFO.NAME_FIELD);
+		scwin.COMMON_MENU_INFO.FILED_ARR.push(scwin.COMMON_MENU_INFO.SRC_FIELD);
+		scwin.COMMON_MENU_INFO.FILED_ARR.push(scwin.COMMON_MENU_INFO.PARENT_FIELD);
+
+
+		var len = scwin.COMMON_MENU_INFO.FILED_ARR.length;
+		
+		
+		for( var j = 0 ; j < len ; j++){
+			columnInfoJson = {
+				"id"   : scwin.COMMON_MENU_INFO.FILED_ARR[j],
+				"name" : scwin.COMMON_MENU_INFO.FILED_ARR[j],
+				"dataType" : "text"
+			};	
+			columnInfoList.push(columnInfoJson);
+		}
+		
+		scwin.createDataList ( $p , scwin.COMMON_MENU_INFO.DATA_LIST , columnInfoList );
+		
+//		var dlt_options = {
+//				"id" : scwin.COMMON_MENU_INFO.DATA_LIST,
+//				"type" : "dataList",
+//				"option":{ 
+//		                "baseNode":"list" ,
+//		               "repeatNode":"map"
+//						},
+//		        "columnInfo": columnInfoList 
+//		};
+//		$p.data.create( dlt_options );
+
+		scwin.getTranMenuData();
+	}; 	
+	
+	/**
+	 * @method
+	 * @name getTranMenuData
+	 * @description $c.common 의 메뉴 데이터 조회 함수
+	 * @hidden Y
+	 * @exception 
+	 * @sample 
+	 */ 
+	scwin.getTranMenuData = function( ){
+		
+		
+		
+		var submit = $p.getSubmission("sbm_menuData");
+		submit.action = scwin.selMenuAction;
+		submit.target = "data:json,"+scwin.COMMON_MENU_INFO.DATA_LIST;
+		$p.executeSubmission(sbm_menuData);
+	};
+	
+	scwin.sbm_menuData_submitdone = function(e) {
+		var jsonData = $p.getComponentById("dlt_menu").getAllJSON();
+		scwin.menuCallBackArr[0]( jsonData );
+		
+		scwin.menuCallBackArr.shift(); // 배열의 첫번째 요소를 제거
+		
+	};
+	
+	
+
+	/**
+	 * @method
+	 * @name openMenu
+	 * @description 메뉴클릭시 TAB CONTROL, WINDOW CONTAINER에 화면추가하기 위한 함수 
+	 * @param <object:N> _$p desc
+ 	 * @param <object:Y> menuInfo 화면url , 화면ID, 화면명 등을 설정한 객체 
+ 	 * @param <object:N> 화면오픈시 화면에 전달할 데이터 객체 
+	 * @hidden N
+	 * @exception 
+	 * @sample 
+	 */ 
+	scwin.openMenu = function( _$p, menuInfo , data){
+	    if ( data == null || typeof   data == "undefined" ){
+			data = menuInfo;    
+		} else {
+			Object.assign( data , menuInfo );
+		}
+			
+		if ( scwin.LAYOUT_TYPE == "T" ){ // 시스템 메인이 TAB CONTROL로 구성되어 있음. 
+			scwin.addTab( _$p, menuInfo   , data);
+		} else if ( scwin.LAYOUT_TYPE == "M" ){
+			scwin.addWindows(_$p, menuInfo  , data);
+		} else {
+			scwin.replaceWindows(_$p, menuInfo  , data);
+		}
+	};
+	
+	scwin.replaceWindows  = function(_$p,  menuInfo , data){
+		var win_main = _$p.top().$p.getComponentById(scwin.LAYOUT_ID);
+		var url = menuInfo[scwin.COMMON_MENU_INFO.SRC_FIELD];
+		var obj = { 
+            dataObject: {"type" : "json","name" : "param","data" : data  } 
+        }; 
+        
+		//현재화면과 동일한 화면을 오픈할  경우 return;
+		
+        if ( win_main.getSrc() == url ) return;   
+		win_main.setSrc(url, obj);
+		
+	};
+
+	scwin.addWindows  = function(_$p,  menuInfo  , data){
+		var win_main = _$p.top().$p.getComponentById(scwin.LAYOUT_ID);
+		
+		var menuId = menuInfo[scwin.COMMON_MENU_INFO.ID_FIELD];
+		var menuNm = menuInfo[scwin.COMMON_MENU_INFO.NAME_FIELD];
+		var url = menuInfo[scwin.COMMON_MENU_INFO.SRC_FIELD];
+		var frameMode =  menuInfo.frameMode || "wframe"
+		var openAction = menuInfo.openAction || "existWindow" ; // 새창으로 열기. // exist/select/new
+			
+		var options = {
+			title : menuNm,
+			src : url,
+			windowTitle : menuNm,
+			windowId : menuId,
+			openAction : openAction,
+			frameMode : frameMode,
+			dataObject : { 
+				type : "json", 
+				name : "param", 
+				data : data
+			}
+		}
+		
+		
+		win_main.createWindow( options );
+
+		//win_main.getFrame(options.windowId).focus();
+	};
+	
+
+	scwin.addTab  = function( _$p, menuInfo , data ){ 
+		var menuId = menuInfo[scwin.COMMON_MENU_INFO.ID_FIELD] || "";
+		var menuNm = menuInfo[scwin.COMMON_MENU_INFO.NAME_FIELD] || "" ;
+		var url = menuInfo[scwin.COMMON_MENU_INFO.SRC_FIELD] || "" ;
+		var openAction = menuInfo.openAction || "select" ; // 새창으로 열기. // exist/select/new
+		var frameMode = menuInfo.frameMode || "wframePreload";
+
+		var closable = menuInfo.closable   ;
+		if( typeof closable === "undefined" || closable == "true" || closable === true ){
+			closable =  true;
+		} else {
+			closable = false;
+		}
+		
+		
+
+		var scope = menuInfo.scope || true  ;
+		if( scope == "false" || !scope ){
+			scope =  false;
+		} else {
+			scope = true;
+		}
+		
+		
+		
+		var tabOptions = {
+				label : menuNm || "",
+				openAction : openAction , 
+				closable : closable
+			};
+		var contentsOptions = {
+				frameMode : frameMode,
+				wframe : true,
+				scope: scope ,
+				src : url,
+				dataObject : { 
+					type : "json", 
+					name : "param", 
+					data : data
+				}
+		};
+		
+		var tab_main = _$p.top().$p.getComponentById(scwin.LAYOUT_ID);
+		
+		var tabID = tab_main.addTab(menuId, tabOptions, contentsOptions);
+		var tabIndex = tab_main.getTabIndex( tabID );
+		
+		if( !tab_main.isLoaded( tabIndex ) ){
+			tab_main.setSelectedTabIndex( tabIndex );
+		} 
+	};
+	
+	
+
+/**
+ * 코드조회를 수행하거나, commonCodeProject page 의 dlt_codeList 에 해당 코드 group( 분류코드 )  데이타가 있는지 체크한다. 
+ *
+ * @date 2020.02.01
+ * @param {Object} _$p setCommonCode를 호출한 화면의 scope을 가진 WebSquare util 객체
+ * @param {Object} {Object} codeOptions {"code" : "코드그룹(분류)-필수", "callBackFunc" : "콜백함수" , "compID" : "적용할 컴포넌트" 
+ *                                       "dataList" : "데이타리스트명" , "wframeId" : "WFRAME 아이디" , "addOption" :"데이타추가여부" , "udcId" : "UDC 아이디" , "gridView" : "그리드뷰인지 유부 ( TRUE/FLASE ) }
+ * @memberOf commonCodeProject
+ * @author InswaveSystems
+ * @example
+ *      var codeOptions = [ 
+ * 		    	            // 1. 메인화면 콤백 함수에서 공통코드 데이타 처리  CASE 
+ * 			                { code : "00001", callBackFunc : "scwin.setDataList" },
+ * 				            // 2. 메인화면 SELECTBOX 중 데이타 LIST BINDING 되어 있는 경우 공통코드 셋팅하는 CASE
+ * 				            { code : "00002", compID : "sel_combo2"  },
+ * 				            // 3. 메인화면 SELECTBOX 중 데이타 LIST BINDING 되어 있는지 않는 경우 DATACOLLECTION 생성후  공통코드 셋팅하는 CASE
+ * 				            { code : "00003", compID : "sel_combo3" },
+ * 				            // 4. 메인화면 데이타 리스트에   공통코드 셋팅하는 CASE ( 데이타리스트 존재햐야함 ) 
+ * 				            { code : "00004", dataList : "dlt_codeSample2" , addOption : false},
+ * 				            // 5. wframe 콤백 함수에서 공통코드 데이타 처리  CASE 
+ * 				            { code : "00005", callBackFunc : "scwin.setDataList", wframeId: "wframe_code1"}, 
+ * 				            // 6. wframeC SELECTBOX 중 데이타 LIST BINDING 되어 있는 경우 공통코드 셋팅하는 CASE
+ * 				            { code : "00006", compID : "selCommonCode"  , wframeId: "wframe_code2" },
+ * 				            // 7. wframe SELECTBOX 중 데이타 LIST BINDING 되어 있는지 않는 경우 DATACOLLECTION 생성후  공통코드 셋팅하는 CASE
+ * 				            { code : "00007", compID : "selCommonCode"  , wframeId: "wframe_code3" },
+ * 				            // 8. wframe데이타 리스트에   공통코드 셋팅하는 CASE ( 데이타리스트 존재해야함 )
+ * 				            { code : "00011", dataList : "dltCodeList" , wframeId: "wframe_code4" , addOption : false  },
+ * 				            // 9. UDC 콤백 함수에서 공통코드 데이타 처리  CASE 
+ * 				            { code : "00012", callBackFunc : "setDataList" , udcId: "udc_code1" },
+ * 				            // 10. 메인화면 그리드에  inputtype select 인것  DATACOLLECTION 생성후  공통코드 셋팅하는 CASE
+ * 			  	            { code : "00001", compID : "grd_sample:col1" , gridView : true}
+ *             		     ];
+ *      com.code.setCommonCode( codeOptions );
+ */
+ 	
+	scwin.setCommonCode  = function( _$p , codeOptions , mainCallBackFunc ) {
+		var codeOptionsLen = 0;
+		if (codeOptions) {
+			codeOptionsLen = codeOptions.length;
+		} else {
+			return;
+		}
+		var dltCodeList = $p.getComponentById(scwin.COMMON_CODE_INFO.DATALIST);
+		
+		var codeObj ;
+		var paramCode = "";
+		var  j = 0;
+		for (var i = 0; i < codeOptionsLen; i++) {
+			dltCodeList.removeColumnFilterAll();
+			dltCodeList.setColumnFilter( {type:'row', colIndex:scwin.COMMON_CODE_INFO.GROUP_COLUMN, key:codeOptions[i].code, condition:'and'});
+			if ( dltCodeList.getAllFilteredJSON().length == 0 ){
+				if (j > 0) {
+					paramCode += ",";
+				}
+				j++;
+				paramCode += codeOptions[i].code;
+			}
+			dltCodeList.removeColumnFilterAll();
+		}
+		if (paramCode !== "" && paramCode != "") {
+			
+			
+			var columnInfoJson = {};
+			var columnInfoList = [];
+		
+			
+			dma_commonCode.set("DATA_PREFIX", scwin.DATA_PREFIX);
+			dma_commonCode.set("GRP_CD", paramCode);
+			var scopeId = scwin.getScopeId( _$p );
+			var scopeOpt = { "key" : scopeId , "value" : _$p , "option" : codeOptions };
+			
+			if ( typeof mainCallBackFunc !== "undefined" ){
+				scopeOpt.callBackFunc = mainCallBackFunc;
+			}
+			
+			
+			dma_commonCode.set("SCOPE_ID", scopeId);
+			
+			
+			scwin.scopeList.push(scopeOpt );
+			var submit = $p.getSubmission("sbm_selectCodeList");
+			
+			submit.action = scwin.selCodeAction;
+			var codeActionMethod = scwin.codeActionMethod || "post";
+			submit.method = scwin.codeActionMethod;
+			
+			var sbum = $p.getSubmission("sbm_selectCodeList");
+			
+			$p.executeSubmission(sbm_selectCodeList);
+		} else {
+			scwin.dataSetFunc(_$p, codeOptions , mainCallBackFunc  );
+		}		
+	};        
+
+/**
+ * 코드조회를 후 submit-done함수 . 
+ * commonCodeProject page 의 dlt_codeList 에 코드list를 add  
+ *
+ * @date 2020.02.01
+ * @param {Object} service response 객체
+ * @memberOf commonCodeProject
+ * @author InswaveSystems
+ */
+	scwin.sbm_selectCodeList_submitdone = function(e) {
+			var json = JSON.parse( e.requestBody ) ;
+			var inx = -1;
+			for( var i = 0 ; i <  scwin.scopeList.length ; i++){
+				if ( scwin.scopeList[i].key ==  json.dma_commonCode.SCOPE_ID ){
+					inx = i;
+				}
+			}
+			if ( inx < 0 ) return;
+			var scopeOpt = scwin.scopeList.splice(inx,1);
+			var _$p = scopeOpt[0].value;
+			var codeOptions =  scopeOpt[0].option;
+			var resJSON = e.responseJSON;
+			var codeListStr = json.dma_commonCode.GRP_CD;
+			var codelistSplit = codeListStr.split(",");
+			var dltCodeList = $p.getComponentById(scwin.COMMON_CODE_INFO.DATALIST);
+			
+			var mainCallbackFunc;
+			if ( typeof scopeOpt[0].callBackFunc !== "undefined" ){
+				mainCallbackFunc = scopeOpt[0].callBackFunc;
+			}
+			
+			for( var i = 0 ; i < codelistSplit.length ; i++){
+				dltCodeList.setColumnFilter( {type:'row', colIndex:scwin.COMMON_CODE_INFO.GROUP_COLUMN, key:codelistSplit[i], condition:'and'});
+				if ( dltCodeList.getAllFilteredJSON().length <= 0 ){
+					dltCodeList.setJSON( resJSON[ scwin.DATA_PREFIX +codelistSplit[i]  ] , true);
+				}
+				dltCodeList.removeColumnFilterAll();
+			}			
+			scwin.dataSetFunc( _$p, codeOptions , mainCallbackFunc );
+	};
+
+
+/**
+ * 메인화면에 codeOption에 따라서 공통코드 셋팅함다.
+ *
+ * @date 2020.02.01
+ * @param {Object} _$p setCommonCode를 호출한 화면의 scope을 가진 WebSquare util 객체
+ * @param {Object} {Object} codeOptions {"code" : "코드그룹(분류)-필수", "callBackFunc" : "콜백함수" , "compID" : "적용할 컴포넌트" 
+ *                                       "dataList" : "데이타리스트명" , "wframeId" : "WFRAME 아이디" , "addOption" :"데이타추가여부" , "udcId" : "UDC 아이디" , "gridView" : "그리드뷰인지 유부 ( TRUE/FLASE ) }
+ * @memberOf commonCodeProject
+ * @author InswaveSystems
+ */
+	scwin.dataSetFunc = function(  _$p, codeOption , mainCallbackFunc ){
+		
+		
+		var scopeId = _$p.id;
+		var dltCodeList = $p.getComponentById(scwin.COMMON_CODE_INFO.DATALIST);
+		for( var i = 0 ; i < codeOption.length ; i++){
+			dltCodeList.removeColumnFilterAll();
+			var  paramOption = codeOption[i];
+			var code =  paramOption.code ;
+			dltCodeList.removeColumnFilterAll();
+			dltCodeList.setColumnFilter( {type:'row', colIndex:scwin.COMMON_CODE_INFO.GROUP_COLUMN, key:code, condition:'and'});
+			var datajson = dltCodeList.getAllFilteredJSON();
+			if ( typeof paramOption.callBackFunc !== "undefined" && paramOption.callBackFunc  ){
+				var funcName = paramOption.callBackFunc;
+				if ( typeof paramOption.wframeId !== "undefined" ){
+					// 5. wframe 콤백 함수에서 공통코드 데이타 처리  CASE 
+					eval (  scopeId + paramOption.wframeId + ".getWindow()."+funcName +"( datajson, code)" );
+				} else if ( typeof paramOption.udcId !== "undefined" ){
+					
+					funcName = funcName.replaceAll( "scwin.", "");
+					eval (  scopeId +paramOption.udcId + "."+funcName +"( datajson, code)" );
+				} else {
+					//( CASE 1) 메인화면 콤백 함수에서 공통코드 데이타 처리  CASE
+					eval (scopeId + funcName +"( datajson, code)" );
+				}
+			} else if ( typeof paramOption.compID !== "undefined" && paramOption.compID){
+				var compNm = paramOption.compID ;
+				var dataListId = "";
+				var gridId = "";
+				if ( typeof paramOption.wframeId === "undefined" || paramOption.wframeId == "" ){
+					if ( typeof paramOption.gridView === "undefined" || paramOption.gridView == "" ){
+						//  ( CASE 2 OR CASE 3 or case6 )메인화면 SELECTBOX 에 공통코드 셋팅
+						dataListId =  _$p.getComponentById(  paramOption.compID ).getDataListInfo().id ;
+					} else if (  paramOption.gridView ){
+						// 10. 메인화면 그리드에  inputtype select 인것  DATACOLLECTION 생성후  공통코드 셋팅하는 CASE
+						var tmpIdArr = paramOption.compID.split(":");
+						gridId = "_"+ tmpIdArr[0];
+					}
+				}
+				if ( typeof dataListId !== "undefined" && dataListId != ""){
+					if ( typeof paramOption.wframeId === "undefined" || paramOption.wframeId == ""){
+					// 2. 메인화면 SELECTBOX 중 데이타 LIST BINDING 되어 있는 경우 공통코드 셋팅하는 CASE
+					// 10. 메인화면 그리드에  inputtype select 인것  DATACOLLECTION 생성후  공통코드 셋팅하는 CASE
+						_$p.getComponentById( dataListId ).setJSON (datajson);
+					} else {
+						// 6. wframeC SELECTBOX 중 데이타 LIST BINDING 되어 있는 경우 공통코드 셋팅하는 CASE
+						var wframe = _$p.getComponentById(paramOption.wframeId  ).getWindow();
+						wframe.$p.getComponentById( dataListId ).setJSON (datajson);
+					}
+				} else {
+					var columnInfoJson = {};
+					var columnInfoList = [];
+					var len = scwin.COMMON_CODE_INFO.FILED_ARR.length;
+					for( var j = 0 ; j < len ; j++){
+						columnInfoJson = {
+							"id"   : scwin.COMMON_CODE_INFO.FILED_ARR[j],
+							"name" : scwin.COMMON_CODE_INFO.FILED_ARR[j],
+							"dataType" : "text"
+						};	
+						columnInfoList.push(columnInfoJson);
+					}
+					var options = {
+									"id" : scwin.COMMON_CODE_INFO.DATALIST+"_"+paramOption.code + gridId,
+									"type" : "dataList",
+									"option":{ 
+							                "baseNode":"list" ,
+							               "repeatNode":"map"
+											},
+							        "columnInfo": columnInfoList 
+								 };
+					if ( typeof paramOption.wframeId === "undefined" || paramOption.wframeId == ""){	
+						// 3. 메인화면 SELECTBOX 중 데이타 LIST BINDING 되어 있는지 않는 경우 DATACOLLECTION 생성후  공통코드 셋팅하는 CASE
+						if ( typeof paramOption.gridView === "undefined"  || paramOption.gridView == ""  ){
+							_$p.data.create( options );
+							_$p.getComponentById( paramOption.compID ).setNodeSet("data:" +options.id, 
+													 scwin.COMMON_CODE_INFO.LABEL , 
+													 scwin.COMMON_CODE_INFO.VALUE);
+							_$p.getComponentById( options.id ).setJSON (datajson);
+						} else if (  paramOption.gridView ){
+							 _$p.data.create( options );
+
+							 var gridObj = _$p.getComponentById(tmpIdArr[0]);
+							 gridObj.setColumnNodeSet(tmpIdArr[1], "data:" + options.id, 
+							                          scwin.COMMON_CODE_INFO.LABEL, scwin.COMMON_CODE_INFO.VALUE);
+							 _$p.getComponentById( options.id ).setJSON (datajson);
+						 }
+					} else {
+						// 7. wframe SELECTBOX 중 데이타 LIST BINDING 되어 있는지 않는 경우 DATACOLLECTION 생성후  공통코드 셋팅하는 CASE
+						var wframe = _$p.getComponentById(paramOption.wframeId  ).getWindow();
+						wframe.$p.data.create( options );
+						wframe.$p.getComponentById( paramOption.compID ).setNodeSet("data:" +options.id, 
+												    scwin.COMMON_CODE_INFO.LABEL , 
+												    scwin.COMMON_CODE_INFO.VALUE);
+						wframe.$p.getComponentById( options.id ).setJSON (datajson);
+					}
+				}	
+			} else if ( typeof paramOption.dataList !== "undefined" && paramOption.dataList){
+				var addOption = paramOption.addOption || false;
+				if ( typeof paramOption.wframeId === "undefined" || paramOption.wframeId == "" ){
+					// 4. 메인화면 데이타 리스트에   공통코드 셋팅하는 CASE ( 데이타리스트 존재햐야함 )
+					_$p.getComponentById(paramOption.dataList).setJSON (datajson ,addOption );
+				} else {
+					// 8. wframe데이타 리스트에   공통코드 셋팅하는 CASE ( 데이타리스트 존재해야함 )
+					var wframe = _$p.getComponentById(paramOption.wframeId  ).getWindow();
+					wframe.$p.getComponentById( paramOption.dataList).setJSON (datajson , addOption);
+				}
+			}	
+		}
+		if ( typeof mainCallbackFunc === "function"){
+			//dltCodeList.removeColumnFilterAll();
+			mainCallbackFunc();
+			
+		} else if ( typeof mainCallbackFunc === "string"){
+			//dltCodeList.removeColumnFilterAll();
+			
+			eval ( scopeId + mainCallbackFunc +"()" );
+		}  
+		
+	};
+
+	scwin.getCodeDataListInfo = function( _$p ){
+		return scwin.COMMON_CODE_INFO;	
+	}
+/**
+ * 호출한 메인화면의 scope id를 return한다.
+ *
+ * @date 2020.02.01
+ * @param {Object} _$p setCommonCode를 호출한 화면의 scope을 가진 WebSquare util 객체
+ * @memberOf commonCodeProject
+ * @author InswaveSystems
+ */
+ 	scwin.getScopeId = function( _$p ){
+		var currDate = new Date();
+		var scopeId = _$p.id + "@"+currDate.getTime();
+		return scopeId;
+	};
+
+
+
+/**
+ * 서버 통신 확장 모듈, Submission를 실행합니다.
+ * 
+ * @date 2017.11.30
+ * @param {Object} sbmObj submission 객체
+ * @param {Object} requestData [Default : null, JSON, XML] 요청 데이터로 submission에 등록된 ref를 무시하고 현재의 값이 할당된다.
+ * @param {Object} compObj [Default : null] 전송중 disable시킬 컴퍼넌트
+ * @memberOf com
+ * @author InswaveSystems
+ */
+	scwin.executeSubmission = function(_$p , sbmObj, requestData, compObj) {
+		_$p.executeSubmission(sbmObj, requestData, compObj);
+	};
+	
+	
+/**
+ * submission의 공통 설정에서 사용.
+ * submisison 통신 직전 호출.
+ * return true일 경우 통신 수행, return false일 경우 통신 중단
+ *
+ * @date 2020.02.01
+ * @param {Object} sbmObj 서브미션 객체
+ * @memberOf commonTranProject
+ * @author InswaveSystems
+ * @return {Boolean} true or false
+ */
+	scwin.commonPreSubmission = function(sbmObj) {
+		return true;
+	};
+
+/**
+ * 모든 submission의 defaultCallback - com.sbm_errorHandler 보다 먼저 수행됨. (400 Error)
+ * config.xml에 설정
+ * 
+ * @date 2020.02.01
+ * @param {Object} resObj responseData 객체
+ * @param {Object} subObj Submission 객체
+ * @memberOf commonTranProject
+ * @author InswaveSystems
+ */
+	scwin.commonCallbackSubmission = function(resObj, subObj) {
+		// server와 연결을 할 수 없을 경우 responseStatusCode가 0으로 발생.
+		if (resObj.responseStatusCode == 0) {
+			var detailStr = "HTTP STATUS INFO";
+			detailStr += resObj.responseStatusCode;
+			detailStr += "URI:";
+			detailStr += resObj.resourceUri;
+
+			var msgObj = {
+				statusCode : "E",
+				errorCode : "E9998",
+				message : "서버와 연결할 수 없습니다. 자세한 내용은 관리자에게 문의하시기 바랍니다.",
+				messageDetail : detailStr
+			};
+
+			scwin.commonResultMsg(msgObj.statusCode , msgObj.errorCode , msgObj.message );
+			return false;
+		}
+
+		var rsJSON = resObj.responseJSON || null;
+		var msgObj = rsJSON[scwin.RESULT_FIELD.MSG_KEY] || null;
+
+		if ( rsJSON && msgObj ) {
+			if (  subObj.userData1 != "false"){
+				scwin.commonResultMsg( msgObj[scwin.RESULT_FIELD.STATUS_CODE] , msgObj[scwin.RESULT_FIELD.RESULT_CD] ,   
+				                       msgObj[scwin.RESULT_FIELD.MSG_DETAIL]   );
+			}
+		}
+	};
+
+/**
+ * submission중 에러가 발생한 경우 호출되는 함수 - 서버 오류(500 error)
+ * 
+ * @date 2020.02.01
+ * @param {Object} resObj responseData 객체
+ * @memberOf commonTranProject
+ * @author InswaveSystems
+ */
+	scwin.commonErrorHandler = function(resObj) {
+
+		var detailStr = "HTTP STATUS INFO";
+		detailStr += resObj.responseReasonPhrase;
+		detailStr += " ";
+		detailStr += resObj.responseStatusCode;
+		detailStr += "URI:";
+		detailStr += resObj.resourceUri;
+		detailStr += resObj.responseBody;
+
+		var msgObj = {
+			statusCode : "E", //변환
+			errorCode : "E9998",//변환
+			message : "서버 오류입니다. 자세한 내용은 관리자에게 문의하시기 바랍니다.",//변환
+			messageDetail : detailStr//변환
+		};
+
+		scwin.commonResultMsg(msgObj.statusCode , msgObj.errorCode , msgObj.message );
+	};
+
+
+
+/**
+ * statusCode값에 따라 message를 출력한다.
+ * 
+ * @date 2020.02.01
+ * @param {Object} resultData 상태코드값 및 메시지가 담긴 JSON.
+ * @param {String} resultData.message 메시지
+ * @param {String} resultData.statusCode 상태코드값
+ * @memberOf commonTranProject
+ * @author InswaveSystems
+ */
+	scwin.commonResultMsg = function(statusCode , resultCode , message ) {
+		
+		var footerWfObj =  $p.top().$p.getComponentById( $p.top().scwin.FOOTER_WFRAME_ID );
+		if (typeof footerWfObj !== "undefined") {
+			var messageObj =  footerWfObj.getWindow().$p.getComponentById( "spn_message");
+			var curCode = messageObj.getUserData("tmpStatusCode");
+			if (curCode) {
+				messageObj.removeClass(curCode);
+			}
+			if ( statusCode) {
+				messageObj.addClass( statusCode );
+			}
+
+			messageObj.setUserData("tmpStatusCode", statusCode); //변환
+			if ( resultCode ){
+				messageObj.setValue("&nbsp;[ "+resultCode+" ] " + message); //변환
+			} else {
+				messageObj.setValue("&nbsp;" +message); //변환
+			} 
+		}
+	};	
+	
+
+/**
+ * dataList create ( 동일한 이름의 dataList가 존재할 경우 삭제후 재생성  )
+ * 
+ * @date 2020.12.24
+ * @param {Object:Y} _$p  common Project 를 호출한( or dataList를 생성하고자 하는 ) Page의 scope을 가진 WebSquare util 객체 
+ * @param {String:Y} dataListId dataList의 id
+ * @param {Array:Y}  columnInfoList - column 정보( id, name,dataType ) 가 있는 JSON 1차원 배열.
+ * @param {String:N} baseNode 명 ( default : list )
+ * @param {String:N} repeatNode 명 ( default : map )
+ * @author InswaveSystems
+ */	
+	scwin.createDataList = function ( _$p , dataListId , columnInfoList , baseNode , repeatNode ) {
+		
+		var baseNodeId = baseNode ? baseNode : "list";
+		var repeatNodeId = repeatNode ?  repeatNode : "map";
+		
+		_$p.data.remove(dataListId);
+		var options = {
+						"id" : dataListId,
+						"type" : "dataList",
+						"option":{ 
+				                "baseNode":baseNodeId ,
+				                "repeatNode":repeatNodeId
+								},
+				        "columnInfo": columnInfoList 
+		};
+		
+		_$p.data.create(options);
+		
+	};
+	
+/**
+ * dataMap create ( 동일한 이름의 dataMap 이 존재할 경우 삭제후 재생성  )
+ * 
+ * @date 2020.12.24
+ * @param {Object:Y} _$p  common Project 를 호출한( or dataMap을 생성하고자 하는 ) Page의 scope을 가진 WebSquare util 객체 
+ * @param {String:Y} dataMapId dataMap의 id
+ * @param {Array:Y}  keyInfoList - dataMap 정보( id, name,dataType ) 가 있는 JSON 1차원 배열.
+ * @param {String:N} baseNode 명 ( default : map )
+ * @author InswaveSystems
+ */	
+	scwin.createDataMap  = function ( _$p , dataMapId , keyInfoList , baseNode  ) {
+		var baseNodeId = baseNode ? baseNode : "map";
+		_$p.data.remove(dataMapId);
+		var options = {
+						"id" : dataMapId,
+						"type" : "dataMap",
+						"option":{ 
+				                "baseNode":baseNodeId ,
+								},
+				        "keyInfo": keyInfoList 
+		};
+		_$p.data.create(options);
+		
+		
+		
+	};
+	
+	
+	
+	]]></script>
+	</head>
+	<body ev:onpageload="scwin.onpageload">
+	</body>
+</html>

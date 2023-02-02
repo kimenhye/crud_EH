@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<websquare>
+    <upload support="true">
+        <baseDir value="/work/wem/data"><!--실제 파일이 업로드되는 경로는 {baseDir}/{folderName}-->
+            <sub1 value="/work/wem/upload/sub1"/>
+            <sub2 value="/work/wem/upload/sub2"/>
+        </baseDir>
+        <encoding value="UTF-8" />
+        <duplicatedFilePostFix value="yyyyMMdd.HHmmss.SSS"/>
+        <firstFilePostFix value="false" />
+        <maxUploadSize value="10485760000">
+            <subSize1 value="100000"/>
+            <subSize2 value="1000000"/>
+        </maxUploadSize><!--10,000MB로 세팅, 단위는 byte-->
+        <uploadMode value="random"/>
+        <folderName value="upload"/><!--파일업로드시에 baseDir(or subDir)경로 뒤에 append됨, 빈값일 경우 uploadMode설정에 따라 baseDir뒤에 postfix값이 append됨, baseDir경로를 그대로 사용하고자 할 경우에는 value="/" 로 설정, 이미지업로드와는 관련 없음-->
+        <imgUpload>
+            <baseDir value="/work/wem/imgUpload" />
+            <subDir value="" />
+            <allowedExtension>
+                gif, jpg
+            </allowedExtension>      
+        </imgUpload>
+        <!--파일업로드 커스터마이징이 필요할 경우
+        <fileDefiner value="com.inswave.test.sampleUploadFileDefinerImpl" />
+        -->
+        <allowedExtension></allowedExtension><!--확장자는 쉼표로 구분, 모든 확장자를 허용하고자 할 경우는 공백없이 내용을 지웁니다 ex) <allowedExtension></allowedExtension>, 확장자가 없는 파일에 대한 제어는 none 으로 합니다  -->
+        <deniedExtension>
+            none, jsp
+        </deniedExtension><!-- 업로드를 제외할 파일의 확장자를 설정합니다. allowedExtension 보다 우선순위가 높습니다.(2011-08-12일자 엔진 이후 적용)-->
+        <callback>
+            <removeKeyPath value="false" /><!--파일업로드 후 응답값에서 서버저장경로를 클라이언트로 내려보내지 않고자할경우 true로 세팅-->
+        </callback>
+        <decrypt value="" />
+    </upload>
+    <engineType value="5"/>
+    <dispatcher>
+        <post>
+            <encoding value="UTF8"></encoding>
+        </post>
+    </dispatcher>
+    <excel>
+        <encoding value="UTF8" /><!--ISO_8859_1 / UTF8 -->
+        <upload>
+            <!--maxUploadSize value="3145728" /-->
+            <!--maxRowCount value=""-->
+            <!--decrypt value="com.inswave.test.ExcelUploadDecrypter" tempDir="/Users/songmingu/Documents/websquare_home" /-->
+            <allowedExtension>zip,exe,xls,xlsx</allowedExtension>
+        </upload>
+        <download>
+            <allowedExtension>zip,exe,xls,xlsx</allowedExtension>
+            <!--encrypt value="com.inswave.test.DownwithFasoo"/-->
+        </download>       
+    </excel>
+    <log>
+        <target console="true" description="basic log" dir="/work/wem/logs/irfid/wgear" filename="websquare" level="INFO"
+                lineNumber="true" name="websquare" retentionPeriod="10" thread="true"/>
+        <target console="true" description="error log" dir="/work/wem/logs/irfid/wgear" filename="exception" level="INFO"
+                lineNumber="true" name="exception" retentionPeriod="10" thread="true"/>
+    </log>
+</websquare>
